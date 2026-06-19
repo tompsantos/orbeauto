@@ -1,0 +1,146 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+  <title>orbeauto</title>
+
+  <style>
+    :root {
+      color-scheme: light;
+      font-family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: #eef3fb;
+      color: #101828;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      min-height: 100vh;
+      margin: 0;
+      display: grid;
+      place-items: center;
+      padding: 24px;
+      background:
+        radial-gradient(circle at top left, rgba(10, 91, 224, 0.18), transparent 35%),
+        radial-gradient(circle at bottom right, rgba(148, 163, 184, 0.22), transparent 32%),
+        linear-gradient(180deg, #f8fbff, #e8eef7);
+    }
+
+    main {
+      width: min(940px, 100%);
+      display: grid;
+      gap: 28px;
+      padding: clamp(28px, 6vw, 58px);
+      background: rgba(255,255,255,0.78);
+      border: 1px solid rgba(226,232,240,0.9);
+      border-radius: 42px;
+      box-shadow:
+        0 28px 80px rgba(15, 23, 42, 0.12),
+        inset 0 1px 0 rgba(255,255,255,0.92);
+      backdrop-filter: blur(18px);
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+
+    .ring {
+      width: 52px;
+      height: 52px;
+      border-radius: 999px;
+      background: conic-gradient(from 215deg, transparent 0 42deg, #0a5be0 43deg, #8ab4ff 190deg, #d8dee8 300deg, transparent 301deg);
+      position: relative;
+      box-shadow: 0 18px 34px rgba(10, 91, 224, 0.18);
+    }
+
+    .ring::after {
+      content: "";
+      position: absolute;
+      inset: 10px;
+      border-radius: inherit;
+      background: #fff;
+    }
+
+    h1 {
+      max-width: 760px;
+      margin: 0;
+      font-size: clamp(42px, 8vw, 82px);
+      line-height: 0.92;
+      letter-spacing: -4px;
+    }
+
+    h1 span {
+      color: #0a5be0;
+    }
+
+    p {
+      max-width: 620px;
+      margin: 0;
+      color: #667085;
+      font-size: clamp(17px, 2.4vw, 22px);
+      line-height: 1.45;
+    }
+
+    .actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      margin-top: 4px;
+    }
+
+    a {
+      min-height: 50px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0 20px;
+      color: #fff;
+      background: linear-gradient(135deg, #0a5be0, #4b8dff);
+      border-radius: 999px;
+      text-decoration: none;
+      font-weight: 800;
+      box-shadow: 0 18px 36px rgba(10, 91, 224, 0.22);
+    }
+
+    a.secondary {
+      color: #0a5be0;
+      background: #fff;
+      border: 1px solid rgba(10, 91, 224, 0.12);
+      box-shadow: none;
+    }
+
+    small {
+      color: #98a2b3;
+      font-weight: 700;
+    }
+  </style>
+</head>
+
+<body>
+  <main>
+    <div class="brand">
+      <div class="ring"></div>
+      <strong>orbe<span style="color:#0a5be0">auto</span></strong>
+    </div>
+
+    <h1>orçamentos de oficina com cara de <span>sistema grande</span>.</h1>
+
+    <p>
+      gestão de clientes, veículos, fotos, pdf profissional e painel financeiro para oficinas automotivas.
+    </p>
+
+    <div class="actions">
+      <a href="/app/">entrar no app</a>
+      <a class="secondary" href="/app/">acessar orbeauto</a>
+    </div>
+
+    <small>orbeone · versão private preview</small>
+  </main>
+</body>
+</html>

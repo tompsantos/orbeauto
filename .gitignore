@@ -1,0 +1,102 @@
+# sistema
+.DS_Store
+Thumbs.db
+
+# node / frontend
+node_modules/
+dist/
+build/
+.vite/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# python / backend
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.venv/
+venv/
+env/
+
+# variáveis e segredos
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.pfx
+*.p12
+*.crt
+*.cer
+*a1*
+*cert*
+*senha*
+*password*
+secrets/
+secret/
+certs/
+certificados/
+
+# banco / dumps
+*.sqlite
+*.sqlite3
+*.db
+*.dump
+*.backup
+*.bak
+*.sql
+
+# uploads, fiscal real e anexos sensíveis
+uploads/
+backend/uploads/
+**/uploads/
+fiscal-pacotes/
+fiscal-debug/
+**/fiscal-debug/
+*.xml
+*.pdf
+*.xlsx
+*.rar
+*.zip
+*.tar
+*.tar.gz
+*.tgz
+*.gz
+
+# logs
+*.log
+logs/
+
+# backups e snapshots locais
+backups/
+*.bkp.*
+*.stable.*
+docker-compose.yml
+docker-compose.bkp*.yml
+docker-compose.stable*.yml
+docker-compose.quebrado*.yml
+backend/main.stable.*
+backend/requirements.stable.*
+package.bkp.json
+vite.config.bkp*.js
+public/sw.bkp*.js
+public/sw.stable*.js
+src/App.bkp*.jsx
+src/App.stable*.jsx
+src/styles.bkp*.css
+src/styles.stable*.css
+
+# manter exemplos seguros
+!.env.example
+!docker-compose.example.yml
+
+# arquivos quebrados/recuperação local
+*.quebrado.*
+backend/main.quebrado.*
+src/App.quebrado.*
