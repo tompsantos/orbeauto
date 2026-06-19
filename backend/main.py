@@ -2343,14 +2343,19 @@ def sign_giss_rps_lab_xml(xml_value):
     if rps_wrapper is None or etree.QName(rps_wrapper).localname != "Rps":
         raise RuntimeError("InfDeclaracaoPrestacaoServico não está dentro do wrapper Rps")
 
-    # O alvo padrão da assinatura é InfDeclaracaoPrestacaoServico.
-    # Não manter Id no Rps interno: alguns validadores Giss interpretam
-    # Rps/@Id como exigência de assinatura direta do próprio Rps e retornam E174.
+    # Modo Giss modelo oficial:
+    # mantém Id no Rps interno, mas a assinatura do RPS referencia
+    # InfDeclaracaoPrestacaoServico, como no padrão ABRASF/Giss.
     rps_nodes = inf.xpath("./*[local-name()='Rps']")
-    if rps_nodes:
-        rps_node = rps_nodes[0]
-        if rps_node.get("Id") is not None:
-            del rps_node.attrib["Id"]
+    if not rps_nodes:
+        raise RuntimeError("não achei Rps interno dentro de InfDeclaracaoPrestacaoServico")
+
+    rps_node = rps_nodes[0]
+    rps_id = rps_node.get("Id")
+    if not rps_id:
+        suffix = inf_id[1:] if inf_id.startswith("D") else inf_id
+        rps_id = "R" + suffix
+        rps_node.set("Id", rps_id)
 
     lote_nodes = root.xpath("/*[local-name()='EnviarLoteRpsEnvio' or local-name()='EnviarLoteRpsSincronoEnvio']/*[local-name()='LoteRps']")
     if not lote_nodes:
@@ -3369,14 +3374,19 @@ def sign_giss_rps_lab_xml(xml_value):
     if rps_wrapper is None or etree.QName(rps_wrapper).localname != "Rps":
         raise RuntimeError("InfDeclaracaoPrestacaoServico não está dentro do wrapper Rps")
 
-    # O alvo padrão da assinatura é InfDeclaracaoPrestacaoServico.
-    # Não manter Id no Rps interno: alguns validadores Giss interpretam
-    # Rps/@Id como exigência de assinatura direta do próprio Rps e retornam E174.
+    # Modo Giss modelo oficial:
+    # mantém Id no Rps interno, mas a assinatura do RPS referencia
+    # InfDeclaracaoPrestacaoServico, como no padrão ABRASF/Giss.
     rps_nodes = inf.xpath("./*[local-name()='Rps']")
-    if rps_nodes:
-        rps_node = rps_nodes[0]
-        if rps_node.get("Id") is not None:
-            del rps_node.attrib["Id"]
+    if not rps_nodes:
+        raise RuntimeError("não achei Rps interno dentro de InfDeclaracaoPrestacaoServico")
+
+    rps_node = rps_nodes[0]
+    rps_id = rps_node.get("Id")
+    if not rps_id:
+        suffix = inf_id[1:] if inf_id.startswith("D") else inf_id
+        rps_id = "R" + suffix
+        rps_node.set("Id", rps_id)
 
     lote_nodes = root.xpath("/*[local-name()='EnviarLoteRpsEnvio' or local-name()='EnviarLoteRpsSincronoEnvio']/*[local-name()='LoteRps']")
     if not lote_nodes:
