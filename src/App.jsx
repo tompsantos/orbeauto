@@ -4896,55 +4896,6 @@ function NewBudget({ go, onSaveDraft, onGenerate, initialDraft, editingBudget })
   return (
     <main className="screen form-screen">
       <input ref={fileInputRef} hidden type="file" accept="image/*" capture="environment" onChange={handlePhoto} />
-          <section className="panel parts-panel">
-            <div className="card-heading loose">
-              <h2><span className="title-icon"><Wrench size={19} /></span>peças</h2>
-            </div>
-
-            <label className="check-row parts-toggle">
-              <input
-                type="checkbox"
-                checked={Boolean(draft.payment.hasParts)}
-                onChange={(event) => updateNested("payment", "hasParts", event.target.checked)}
-              />
-              incluir peças neste orçamento
-            </label>
-
-            {draft.payment.hasParts && (
-              <div className="form-grid parts-grid">
-                <label className="field wide">
-                  <span>descrição das peças</span>
-                  <div className="field-box">
-                    <textarea
-                      value={draft.payment.partsDescription || ""}
-                      placeholder="ex: parachoque, presilhas, suporte, moldura..."
-                      onChange={(event) => updateNested("payment", "partsDescription", event.target.value)}
-                    />
-                  </div>
-                </label>
-
-                <Field
-                  label="valor das peças"
-                  placeholder="0,00"
-                  inputMode="decimal"
-                  icon={<DollarSign size={18} />}
-                  value={draft.payment.partsAmount}
-                  onChange={(value) => updateNested("payment", "partsAmount", formatCurrencyInput(value))}
-                />
-              </div>
-            )}
-
-            <div className="parts-total-preview">
-              <span>total estimado</span>
-              <strong>
-                {moneyLabel(
-                  moneyNumber(draft.payment.serviceAmount || draft.payment.amount) +
-                  (draft.payment.hasParts ? moneyNumber(draft.payment.partsAmount) : 0)
-                )}
-              </strong>
-              <small>serviços + peças</small>
-            </div>
-          </section>
 
       <header className="nav-title">
         <button className="round-button ghost" onClick={() => go(isEditing ? "ready" : "home")}><ArrowLeft size={21} /></button>
@@ -5065,9 +5016,78 @@ function NewBudget({ go, onSaveDraft, onGenerate, initialDraft, editingBudget })
 
       <Accordion id="valor" open={open} setOpen={requestOpen} icon={<DollarSign size={19} />} title="valor e pagamento" summary="valor e forma de pagamento obrigatórios">
         <div className="form-grid">
-          <Field label="valor do serviço *" placeholder="ex: R$ 2.350,00" inputMode="numeric" value={draft.payment.amount} onChange={(value) => update("payment", "amount", formatCurrencyInput(value))} />
+          <Field
+            label="valor do serviço *"
+            placeholder="ex: R$ 2.350,00"
+            inputMode="numeric"
+            value={draft.payment.serviceAmount || draft.payment.amount}
+            onChange={(value) => {
+              const formatted = formatCurrencyInput(value);
+              setDraft((current) => ({
+                ...current,
+                payment: {
+                  ...current.payment,
+                  serviceAmount: formatted,
+                  amount: formatted
+                }
+              }));
+              if (validationError) setValidationError("");
+            }}
+          />
           <Field label="forma de pagamento *" placeholder="pix, cartão, dinheiro" value={draft.payment.method} onChange={(value) => update("payment", "method", value)} />
         </div>
+
+        <section className="panel parts-panel">
+          <div className="card-heading loose">
+            <h2><span className="title-icon"><Wrench size={19} /></span>peças</h2>
+          </div>
+
+          <label className="check-row parts-toggle">
+            <input
+              type="checkbox"
+              checked={Boolean(draft.payment.hasParts)}
+              onChange={(event) => update("payment", "hasParts", event.target.checked)}
+            />
+            incluir peças neste orçamento
+          </label>
+
+          {draft.payment.hasParts && (
+            <>
+              <div className="form-grid parts-grid">
+                <label className="field wide">
+                  <span>descrição das peças</span>
+                  <div className="field-box">
+                    <textarea
+                      value={draft.payment.partsDescription || ""}
+                      placeholder="ex: parachoque, presilhas, suporte, moldura..."
+                      onChange={(event) => update("payment", "partsDescription", event.target.value)}
+                    />
+                  </div>
+                </label>
+
+                <Field
+                  label="valor das peças"
+                  placeholder="0,00"
+                  inputMode="decimal"
+                  icon={<DollarSign size={18} />}
+                  value={draft.payment.partsAmount}
+                  onChange={(value) => update("payment", "partsAmount", formatCurrencyInput(value))}
+                />
+              </div>
+
+              <div className="parts-total-preview">
+                <span>total estimado</span>
+                <strong>
+                  {moneyLabel(
+                    moneyNumber(draft.payment.serviceAmount || draft.payment.amount) +
+                    moneyNumber(draft.payment.partsAmount)
+                  )}
+                </strong>
+                <small>serviços + peças</small>
+              </div>
+            </>
+          )}
+        </section>
 
         <div className="segmented-block">
           <span>condição</span>
