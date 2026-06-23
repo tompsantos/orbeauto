@@ -8492,3 +8492,52 @@ body::after {
   color: rgba(255, 251, 235, 0.82);
   line-height: 1.45;
 }
+
+
+.parts-panel {
+  display: grid;
+  gap: 14px;
+}
+
+.parts-toggle {
+  align-items: center;
+  justify-content: flex-start;
+  gap: 10px;
+}
+
+.parts-grid {
+  margin-top: 2px;
+}
+
+.field-box textarea {
+  width: 100%;
+  min-height: 92px;
+  border: 0;
+  outline: 0;
+  resize: vertical;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  line-height: 1.35;
+}
+
+.parts-total-preview {
+  display: grid;
+  gap: 2px;
+  padding: 14px 16px;
+  border: 1px solid rgba(10, 91, 224, 0.14);
+  border-radius: 20px;
+  background: linear-gradient(135deg, rgba(10, 91, 224, 0.08), rgba(255, 255, 255, 0.9));
+}
+
+.parts-total-preview span,
+.parts-total-preview small {
+  color: #667085;
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+
+.parts-total-preview strong {
+  color: #0a5be0;
+  font-size: 1.25rem;
+}

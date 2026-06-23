@@ -192,6 +192,9 @@ class Order(Base):
     damage_description = Column(Text, nullable=True)
     service_description = Column(Text, nullable=True)
 
+    service_amount = Column(Numeric(12, 2), default=0)
+    parts_description = Column(Text, nullable=True)
+    parts_amount = Column(Numeric(12, 2), default=0)
     amount = Column(Numeric(12, 2), default=0)
     payment_method = Column(String, nullable=True)
     payment_condition = Column(String, default="avista")
@@ -357,6 +360,10 @@ def ensure_operational_columns():
         "ALTER TABLE orders ADD COLUMN IF NOT EXISTS production_status VARCHAR DEFAULT 'orcamento'",
         "ALTER TABLE orders ADD COLUMN IF NOT EXISTS production_notes TEXT",
         "ALTER TABLE orders ADD COLUMN IF NOT EXISTS checklist_json TEXT",
+        "ALTER TABLE orders ADD COLUMN IF NOT EXISTS service_amount NUMERIC(12, 2) DEFAULT 0",
+        "ALTER TABLE orders ADD COLUMN IF NOT EXISTS parts_description TEXT",
+        "ALTER TABLE orders ADD COLUMN IF NOT EXISTS parts_amount NUMERIC(12, 2) DEFAULT 0",
+        "UPDATE orders SET service_amount = amount WHERE (service_amount IS NULL OR service_amount = 0) AND COALESCE(parts_amount, 0) = 0 AND COALESCE(amount, 0) <> 0",
         "ALTER TABLE orders ADD COLUMN IF NOT EXISTS finished_at TIMESTAMPTZ",
     ]
 
@@ -498,6 +505,9 @@ class InsurancePayload(BaseModel):
 
 class PaymentPayload(BaseModel):
     amount: float = 0
+    service_amount: Optional[float] = None
+    parts_description: Optional[str] = None
+    parts_amount: Optional[float] = 0
     method: Optional[str] = "pix"
     condition: Optional[str] = "avista"
     installments: Optional[int] = 1
@@ -640,6 +650,44 @@ def parse_damage_types(value: str):
         return []
 
 
+def money_float(value):
+    try:
+        return float(value or 0)
+    except Exception:
+        return 0.0
+
+
+def order_parts_amount(order: Order):
+    return money_float(getattr(order, "parts_amount", 0))
+
+
+def order_service_amount(order: Order):
+    service = getattr(order, "service_amount", None)
+    parts = order_parts_amount(order)
+    total = money_float(getattr(order, "amount", 0))
+
+    if service is not None:
+        service_value = money_float(service)
+        if service_value or not total:
+            return service_value
+
+    if total and parts:
+        return max(total - parts, 0)
+
+    return total
+
+
+def order_total_amount(order: Order):
+    service = order_service_amount(order)
+    parts = order_parts_amount(order)
+    total = money_float(getattr(order, "amount", 0))
+
+    if service or parts:
+        return service + parts
+
+    return total
+
+
 
 def parse_optional_datetime(value):
     if not value:
@@ -761,7 +809,10 @@ def serialize_order(order: Order):
         "damage_description": order.damage_description,
         "service_description": order.service_description,
         "payment": {
-            "amount": float(order.amount or 0),
+            "amount": order_total_amount(order),
+            "service_amount": order_service_amount(order),
+            "parts_description": order.parts_description or "",
+            "parts_amount": order_parts_amount(order),
             "method": order.payment_method,
             "condition": order.payment_condition,
             "installments": order.installments,
@@ -888,7 +939,17 @@ def create_or_update_order(
     order.damage_types = json.dumps(payload.damage_types or [], ensure_ascii=False)
     order.damage_description = payload.damage_description
     order.service_description = payload.service_description
-    order.amount = payload.payment.amount or 0
+
+    service_amount = payload.payment.service_amount
+    if service_amount is None:
+        service_amount = payload.payment.amount or 0
+
+    parts_amount = payload.payment.parts_amount or 0
+
+    order.service_amount = max(float(service_amount or 0), 0)
+    order.parts_description = (payload.payment.parts_description or "").strip() or None
+    order.parts_amount = max(float(parts_amount or 0), 0)
+    order.amount = order.service_amount + order.parts_amount
     order.payment_method = payload.payment.method
     order.payment_condition = payload.payment.condition or "avista"
     order.installments = payload.payment.installments or 1
@@ -4279,7 +4340,7 @@ def payment_label(order):
     installments = int(order.installments or 1)
 
     if condition == "parcelado" and installments > 1:
-        total = float(order.amount or 0)
+        total = order_total_amount(order)
         part = total / installments if installments else total
         return f"{installments}x de {money_br(part)}"
 
@@ -4489,7 +4550,14 @@ def build_order_pdf(order: Order, workshop: Workshop):
     issue_date = date_br(datetime.now(timezone.utc))
     created_date = date_br(order.created_at)
 
-    amount_label = money(order.amount)
+    service_amount = order_service_amount(order)
+    parts_amount = order_parts_amount(order)
+    total_amount = order_total_amount(order)
+    parts_description = (order.parts_description or "").strip()
+
+    service_amount_label = money(service_amount)
+    parts_amount_label = money(parts_amount)
+    amount_label = money(total_amount)
     payment_method = payment_label(order)
     raw_damages = damage_list(order)
 
@@ -4698,23 +4766,37 @@ def build_order_pdf(order: Order, workshop: Workshop):
         [
             [
                 [
+                    p("VALOR DOS SERVIÇOS", "pdfSmallCaps"),
+                    p(service_amount_label, "pdfBodyBold"),
+                ],
+                [
+                    p("VALOR DAS PEÇAS", "pdfSmallCaps"),
+                    p(parts_amount_label, "pdfBodyBold"),
+                    p(parts_description or "sem peças informadas.", "pdfBody"),
+                ],
+            ],
+            [
+                [
                     p("VALOR TOTAL", "pdfSmallCaps"),
                     p(amount_label, "pdfValue"),
                 ],
                 [
                     p("PAGAMENTO", "pdfSmallCaps"),
                     p(payment_method or "não informado", "pdfBodyBold"),
-                    p("Valores e condições podem ser ajustados após avaliação técnica complementar, quando aplicável.", "pdfNote"),
+                    p("Total calculado como serviços + peças. Valores e condições podem ser ajustados após avaliação técnica complementar, quando aplicável.", "pdfNote"),
                 ],
-            ]
+            ],
         ],
         colWidths=[72 * mm, 110 * mm],
     )
 
     payment_table.setStyle(TableStyle([
         ("BOX", (0, 0), (-1, -1), 0.4, colors.HexColor("#D0D5DD")),
-        ("BACKGROUND", (0, 0), (0, 0), colors.HexColor("#EEF4FF")),
+        ("INNERGRID", (0, 0), (-1, -1), 0.25, colors.HexColor("#E4E7EC")),
+        ("BACKGROUND", (0, 0), (0, 0), colors.HexColor("#F8FAFC")),
         ("BACKGROUND", (1, 0), (1, 0), colors.HexColor("#FFFFFF")),
+        ("BACKGROUND", (0, 1), (0, 1), colors.HexColor("#EEF4FF")),
+        ("BACKGROUND", (1, 1), (1, 1), colors.HexColor("#FFFFFF")),
         ("LEFTPADDING", (0, 0), (-1, -1), 10),
         ("RIGHTPADDING", (0, 0), (-1, -1), 10),
         ("TOPPADDING", (0, 0), (-1, -1), 10),

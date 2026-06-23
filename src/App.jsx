@@ -73,7 +73,16 @@ const emptyDraft = {
   damageTypes: ["amassado"],
   damageDescription: "",
   serviceDescription: "",
-  payment: { amount: "", method: "pix", condition: "avista", installments: "1" },
+  payment: {
+    amount: "",
+    serviceAmount: "",
+    hasParts: false,
+    partsDescription: "",
+    partsAmount: "",
+    method: "pix",
+    condition: "avista",
+    installments: "1"
+  },
   photos: []
 };
 
@@ -182,6 +191,39 @@ function moneyLabel(value, fallback = "R$ 0,00") {
   return parsed.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 }
 
+function budgetServiceAmount(budget) {
+  return moneyNumber(
+    budget?.payment?.serviceAmount ??
+    budget?.payment?.service_amount ??
+    budget?.payment?.amount
+  );
+}
+
+function budgetPartsAmount(budget) {
+  return moneyNumber(
+    budget?.payment?.partsAmount ??
+    budget?.payment?.parts_amount ??
+    0
+  );
+}
+
+function budgetPartsDescription(budget) {
+  return (
+    budget?.payment?.partsDescription ||
+    budget?.payment?.parts_description ||
+    ""
+  );
+}
+
+function budgetTotalAmount(budget) {
+  const service = budgetServiceAmount(budget);
+  const parts = budgetPartsAmount(budget);
+
+  if (service || parts) return service + parts;
+
+  return moneyNumber(budget?.payment?.amount);
+}
+
 function todayLabel() {
   return new Date()
     .toLocaleDateString("pt-BR", { weekday: "short", day: "2-digit", month: "short" })
@@ -215,7 +257,7 @@ function timeLabel(iso) {
 function installmentLabel(budget) {
   const condition = budget?.payment?.condition;
   const installments = Number(budget?.payment?.installments || 1);
-  const amount = moneyNumber(budget?.payment?.amount);
+  const amount = budgetTotalAmount(budget);
 
   if (condition !== "parcelado" || installments <= 1) return "à vista no pix";
 
@@ -284,6 +326,10 @@ function normalizeOrder(o) {
     serviceDescription: o.service_description || "",
     payment: {
       amount: String(o.payment?.amount ?? ""),
+      serviceAmount: String(o.payment?.service_amount ?? o.payment?.amount ?? ""),
+      hasParts: Boolean(o.payment?.parts_description || Number(o.payment?.parts_amount || 0)),
+      partsDescription: o.payment?.parts_description || "",
+      partsAmount: String(o.payment?.parts_amount ?? ""),
       method: o.payment?.method || "pix",
       condition: o.payment?.condition || "avista",
       installments: String(o.payment?.installments || 1)
@@ -417,6 +463,8 @@ function orderVehicleLabel(order) {
 }
 
 function orderAmountValue(order) {
+  if (order?.payment) return budgetTotalAmount(order);
+
   return (
     order.amount ??
     order.total ??
@@ -996,6 +1044,10 @@ function normalizeCustomer(c) {
 }
 
 function toApiOrder(draft, status = "em aberto") {
+  const serviceAmount = moneyNumber(draft.payment?.serviceAmount || draft.payment?.amount);
+  const partsAmount = draft.payment?.hasParts ? moneyNumber(draft.payment?.partsAmount) : 0;
+  const totalAmount = serviceAmount + partsAmount;
+
   return {
     customer: {
       name: draft.customer.name || "cliente sem nome",
@@ -1023,7 +1075,10 @@ function toApiOrder(draft, status = "em aberto") {
     damage_description: draft.damageDescription,
     service_description: draft.serviceDescription,
     payment: {
-      amount: moneyNumber(draft.payment.amount),
+      amount: totalAmount,
+      service_amount: serviceAmount,
+      parts_description: draft.payment?.hasParts ? draft.payment?.partsDescription : "",
+      parts_amount: partsAmount,
       method: draft.payment.method,
       condition: draft.payment.condition,
       installments: Number(draft.payment.installments || 1)
@@ -1156,7 +1211,10 @@ function buildWhatsappText(budget, workshop) {
       ? `os/atendimento: ${budget.insurance.serviceOrder}`
       : "",
     `serviço: ${budget.serviceDescription}`,
-    `valor: ${moneyLabel(budget.payment.amount)}`,
+    `serviços: ${moneyLabel(budgetServiceAmount(budget))}`,
+    budgetPartsAmount(budget) ? `peças: ${moneyLabel(budgetPartsAmount(budget))}` : "",
+    budgetPartsDescription(budget) ? `descrição das peças: ${budgetPartsDescription(budget)}` : "",
+    `total: ${moneyLabel(budgetTotalAmount(budget))}`,
     `condição: ${installmentLabel(budget)}`,
     "",
     `${workshop.name} - ${workshop.phone}`,
@@ -3395,6 +3453,9 @@ function hasMeaningfulNewBudgetDraft(draft) {
     draft.damageDescription,
     draft.serviceDescription,
     draft.payment?.amount,
+    draft.payment?.serviceAmount,
+    draft.payment?.partsDescription,
+    draft.payment?.partsAmount,
     draft.payment?.method,
     draft.payment?.installments
   ];
@@ -4086,8 +4147,13 @@ function ReadyBudget({
         </div>
 
         <div className="ready-v2-value-block">
-          <span>valor do serviço</span>
-          <strong>{amountLabel}</strong>
+          <span>valor total do orçamento</span>
+          <strong>{moneyLabel(budgetTotalAmount(budget))}</strong>
+          <p>
+            serviços: {moneyLabel(budgetServiceAmount(budget))}
+            {budgetPartsAmount(budget) ? ` · peças: ${moneyLabel(budgetPartsAmount(budget))}` : ""}
+          </p>
+          {budgetPartsDescription(budget) && <p>peças: {budgetPartsDescription(budget)}</p>}
           <p>{payment.method || "forma não informada"} · {payment.condition || "condição não informada"}</p>
         </div>
 
@@ -4830,6 +4896,55 @@ function NewBudget({ go, onSaveDraft, onGenerate, initialDraft, editingBudget })
   return (
     <main className="screen form-screen">
       <input ref={fileInputRef} hidden type="file" accept="image/*" capture="environment" onChange={handlePhoto} />
+          <section className="panel parts-panel">
+            <div className="card-heading loose">
+              <h2><span className="title-icon"><Wrench size={19} /></span>peças</h2>
+            </div>
+
+            <label className="check-row parts-toggle">
+              <input
+                type="checkbox"
+                checked={Boolean(draft.payment.hasParts)}
+                onChange={(event) => updateNested("payment", "hasParts", event.target.checked)}
+              />
+              incluir peças neste orçamento
+            </label>
+
+            {draft.payment.hasParts && (
+              <div className="form-grid parts-grid">
+                <label className="field wide">
+                  <span>descrição das peças</span>
+                  <div className="field-box">
+                    <textarea
+                      value={draft.payment.partsDescription || ""}
+                      placeholder="ex: parachoque, presilhas, suporte, moldura..."
+                      onChange={(event) => updateNested("payment", "partsDescription", event.target.value)}
+                    />
+                  </div>
+                </label>
+
+                <Field
+                  label="valor das peças"
+                  placeholder="0,00"
+                  inputMode="decimal"
+                  icon={<DollarSign size={18} />}
+                  value={draft.payment.partsAmount}
+                  onChange={(value) => updateNested("payment", "partsAmount", formatCurrencyInput(value))}
+                />
+              </div>
+            )}
+
+            <div className="parts-total-preview">
+              <span>total estimado</span>
+              <strong>
+                {moneyLabel(
+                  moneyNumber(draft.payment.serviceAmount || draft.payment.amount) +
+                  (draft.payment.hasParts ? moneyNumber(draft.payment.partsAmount) : 0)
+                )}
+              </strong>
+              <small>serviços + peças</small>
+            </div>
+          </section>
 
       <header className="nav-title">
         <button className="round-button ghost" onClick={() => go(isEditing ? "ready" : "home")}><ArrowLeft size={21} /></button>
