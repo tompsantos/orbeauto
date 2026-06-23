@@ -474,12 +474,6 @@ function isFinishedOperationally(order) {
 }
 
 
-
-
-
-
-
-
 function openScheduleDatePicker(order, options = {}) {
   return new Promise((resolve) => {
     if (typeof document === "undefined") {
@@ -691,8 +685,6 @@ if (typeof window !== "undefined") {
 }
 
 
-
-
 function syncOrderStatusFromProduction(order) {
   const productionStatus = String(order.production_status || "").toLowerCase();
 
@@ -712,9 +704,6 @@ function syncOrderStatusFromProduction(order) {
 
   return order;
 }
-
-
-
 
 
 function normalizePhotoStage(value) {
@@ -3032,7 +3021,7 @@ function DbStatusDot() {
 
     async function check() {
       try {
-        const response = await fetch("/api/health", { cache: "no-store" });
+        const response = await fetch(`${API_BASE}/health`, { cache: "no-store" });
         if (alive) setOnline(response.ok);
       } catch {
         if (alive) setOnline(false);
@@ -3190,7 +3179,7 @@ function Home({ go, budgets, openBudget, onDeleteBudget, workshop, user, onLogou
         </div>
       </section>
 
-      
+
       <HomeScheduleBoard
         buckets={agendaBuckets}
         openBudget={openBudget}
@@ -6042,7 +6031,7 @@ export default function App() {
     formData.append("stage", stage);
     formData.append("caption", "");
 
-    const response = await fetch(`/api/orders/${orderId}/photos`, {
+    const response = await fetch(`${API_BASE}/orders/${orderId}/photos`, {
       method: "POST",
       headers: {
         Authorization: `Bearer ${token}`
@@ -6073,7 +6062,7 @@ export default function App() {
   }
 
   async function handleDeleteOrderPhoto(orderId, photoId) {
-    const response = await fetch(`/api/orders/${orderId}/photos/${photoId}`, {
+    const response = await fetch(`${API_BASE}/orders/${orderId}/photos/${photoId}`, {
       method: "DELETE",
       headers: {
         Authorization: `Bearer ${token}`
@@ -6353,9 +6342,9 @@ export default function App() {
         openBudget={openBudget}
         onDeleteBudget={handleDeleteBudget}
         onLogout={handleLogout}
-              onScheduleBudget={handleScheduleBudget}
+        onScheduleBudget={handleScheduleBudget}
         onReceiveBudget={handleVehicleArrived}
-/>
+      />
     );
   }
 

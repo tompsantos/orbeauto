@@ -297,7 +297,6 @@ class FiscalDocument(Base):
     nfse_verification_code = Column(String, nullable=True)
 
 
-
 Base.metadata.create_all(bind=engine)
 
 def ensure_subscription_columns():
@@ -409,26 +408,6 @@ def admin_datetime_label(value):
         return value.isoformat()
     except Exception:
         return None
-
-    statements = [
-        "ALTER TABLE workshops ADD COLUMN IF NOT EXISTS plan VARCHAR DEFAULT 'trial'",
-        "ALTER TABLE workshops ADD COLUMN IF NOT EXISTS subscription_status VARCHAR DEFAULT 'trial'",
-        "ALTER TABLE workshops ADD COLUMN IF NOT EXISTS billing_status VARCHAR DEFAULT 'ok'",
-        "ALTER TABLE workshops ADD COLUMN IF NOT EXISTS monthly_price FLOAT DEFAULT 0",
-        "ALTER TABLE workshops ADD COLUMN IF NOT EXISTS due_day INTEGER",
-        "ALTER TABLE workshops ADD COLUMN IF NOT EXISTS locked_reason TEXT",
-        "ALTER TABLE workshops ADD COLUMN IF NOT EXISTS internal_notes TEXT",
-    ]
-
-    with engine.begin() as conn:
-        for statement in statements:
-            conn.execute(text(statement))
-
-
-ensure_subscription_columns()
-
-
-
 
 
 class OrderSchedulePayload(BaseModel):
@@ -547,7 +526,6 @@ class FiscalDraftPayload(BaseModel):
     status: Optional[str] = "rascunho"
 
 
-
 def get_db():
     db = SessionLocal()
     try:
@@ -569,9 +547,9 @@ def create_token(user: User):
         "sub": user.id,
         "workshop_id": user.workshop_id,
         "role": user.role,
-        "exp": datetime.utcnow() + timedelta(days=7),
+        "exp": datetime.now(timezone.utc) + timedelta(days=7),
     }
-    return jwt.encode(payload, JWT_SECRET, algorithm="HS256")
+    return jwt.encode(payload, JWT_SECRET, algorithm=JWT_ALGORITHM)
 
 
 def get_current_user(
@@ -579,7 +557,7 @@ def get_current_user(
     db: Session = Depends(get_db),
 ):
     try:
-        payload = jwt.decode(credentials.credentials, JWT_SECRET, algorithms=["HS256"])
+        payload = jwt.decode(credentials.credentials, JWT_SECRET, algorithms=[JWT_ALGORITHM])
         user_id = payload.get("sub")
     except JWTError:
         raise HTTPException(status_code=401, detail="token inválido")
@@ -589,7 +567,6 @@ def get_current_user(
     if not user:
         raise HTTPException(status_code=401, detail="usuário não encontrado")
 
-    
     if user.workshop and (
         not user.workshop.active
         or user.workshop.subscription_status in ["suspenso", "bloqueado", "inadimplente"]
@@ -629,7 +606,7 @@ def user_dict(user: User):
 
 
 def order_code():
-    return str(int(datetime.now().timestamp() * 1000))[-8:]
+    return str(int(datetime.now(timezone.utc).timestamp() * 1000))[-8:]
 
 
 def parse_damage_types(value: str):
@@ -638,7 +615,6 @@ def parse_damage_types(value: str):
         return parsed if isinstance(parsed, list) else []
     except Exception:
         return []
-
 
 
 def parse_optional_datetime(value):
@@ -1310,8 +1286,6 @@ def save_order_fiscal_draft(
     return fiscal_document_dict(document)
 
 
-
-
 def fiscal_validation_errors(document: FiscalDocument, settings: FiscalSettings):
     errors = []
 
@@ -1502,7 +1476,6 @@ def download_order_fiscal_draft_xml(
             "Content-Disposition": f'attachment; filename="{filename}"'
         },
     )
-
 
 
 def giss_clean(value):
@@ -1774,7 +1747,6 @@ def download_order_giss_rps_lab_xml(
     )
 
 
-
 def read_secret_file(path_value):
     if not path_value:
         return ""
@@ -1890,7 +1862,6 @@ def fiscal_certificate_status(
         "workshop_cnpj": workshop_cnpj,
         "matches_workshop_cnpj_hint": workshop_cnpj in subject_digits or workshop_cnpj in issuer_digits,
     }
-
 
 
 def xml_c14n(node):
@@ -2052,7 +2023,6 @@ def _sign_giss_rps_lab_xml_original(xml_bytes):
     )
 
 
-
 def giss_fix_rps_signature_position(xml_value):
     from lxml import etree
 
@@ -2088,9 +2058,6 @@ def giss_fix_rps_signature_position(xml_value):
     ).decode("utf-8")
 
     return xml_text, moved
-
-
-
 
 
 def giss_xmlsec_strip_blank_text_nodes(node):
@@ -2142,8 +2109,6 @@ def giss_xmlsec_normalize_root(root):
         new_root.append(child)
 
     return new_root
-
-
 
 
 def giss_xmlsec_signature_template(ref_id):
@@ -2263,7 +2228,6 @@ def giss_xmlsec_sign_file(input_path, output_path, key_path, cert_path, node_xpa
             f"stdout:\n{result.stdout}\n"
             f"stderr:\n{result.stderr}"
         )
-
 
 
 def giss_xmlsec_ensure_codigo_pais(root):
@@ -2473,7 +2437,6 @@ def download_order_giss_rps_signed_lab_xml(
     )
 
 
-
 GISS_WS_URL = "https://ws-jaboticabal.giss.com.br/service-ws/nf/nfse-ws"
 
 
@@ -2643,7 +2606,6 @@ def fiscal_giss_test_consultar_rps(
     }
 
 
-
 def giss_real_send_enabled():
     raw = os.getenv("GISS_ALLOW_REAL_SEND", "false")
     return str(raw).strip().lower() in {"1", "true", "yes", "sim", "on"}
@@ -2667,8 +2629,6 @@ def giss_count_signature_nodes(xml_value):
     # Conta apenas o elemento ds:Signature real.
     # Não conta ds:SignatureMethod nem ds:SignatureValue.
     return len(re.findall(r"<(?:\w+:)?Signature(?:\s|>)", text))
-
-
 
 
 def giss_default_rps_series(settings):
@@ -2846,7 +2806,6 @@ def fiscal_giss_send_lab(
     }
 
 
-
 def giss_translate_message(message):
     codigo = giss_clean(message.get("Codigo"))
     texto = giss_clean(message.get("Mensagem"))
@@ -2937,7 +2896,6 @@ def giss_response_summary(result):
         "http_status": result.get("http_status"),
         "messages": translated,
     }
-
 
 
 def giss_extract_first_text(xml_text, local_names):
@@ -3060,7 +3018,6 @@ def giss_fiscal_document_public_payload(document: FiscalDocument):
     }
 
 
-
 def get_existing_fiscal_document(db: Session, user: User, order_id: str):
     return (
         db.query(FiscalDocument)
@@ -3135,7 +3092,6 @@ def fiscal_order_issue(
         user=user,
         db=db,
     )
-
 
 
 def giss_c14n_node(node):
@@ -3328,19 +3284,6 @@ def giss_strip_blank_text_nodes(node):
         giss_strip_blank_text_nodes(child)
 
     return node
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 def sign_giss_rps_lab_xml(xml_value):
@@ -3540,7 +3483,6 @@ def serialize_customer(customer: Customer, db: Session, include_orders: bool = F
         data["orders"] = [serialize_order(order) for order in orders]
 
     return data
-
 
 
 class AdminLoginPayload(BaseModel):
@@ -3796,8 +3738,6 @@ def update_subscriber(
     return subscriber_dict(workshop, db)
 
 
-
-
 @app.patch("/admin/subscribers/{workshop_id}/owner-password")
 def reset_subscriber_owner_password(
     workshop_id: str,
@@ -3923,7 +3863,6 @@ def list_admin_audit(
     return result
 
 
-
 @app.patch("/orders/{order_id}/schedule")
 def update_order_schedule(
     order_id: str,
@@ -3977,10 +3916,9 @@ def update_order_production(
 
     if payload.production_status is not None:
         order.production_status = normalize_production_status(payload.production_status)
-    # orbeauto 1.16d status sync
+
     if order.production_status == "finalizado":
         order.status = "finalizado"
-        # orbeauto 1.16e finished_at
         if not order.finished_at:
             order.finished_at = datetime.now(timezone.utc)
     elif order.production_status == "cancelado":
@@ -5157,9 +5095,7 @@ def delete_order(
         if file_path.exists():
             file_path.unlink()
 
-    # 1.20 fiscal foundation:
-    # remove documentos fiscais/rascunhos ligados ao orçamento antes de apagar o orçamento.
-    # sem isso, o banco bloqueia o delete por causa da chave estrangeira.
+    # remove documentos fiscais vinculados antes de apagar o orçamento (FK constraint)
     db.query(FiscalDocument).filter(
         FiscalDocument.order_id == order.id,
         FiscalDocument.workshop_id == user.workshop_id,
@@ -5169,7 +5105,6 @@ def delete_order(
     db.commit()
 
     return {"ok": True}
-
 
 
 PHOTO_LABELS = {
