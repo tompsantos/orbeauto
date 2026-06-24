@@ -4320,7 +4320,6 @@ function ReadyBudget({
               hidden
               type="file"
               accept="image/*"
-              capture="environment"
               onChange={handleAfterPhoto}
             />
 
@@ -4895,7 +4894,7 @@ function NewBudget({ go, onSaveDraft, onGenerate, initialDraft, editingBudget })
 
   return (
     <main className="screen form-screen">
-      <input ref={fileInputRef} hidden type="file" accept="image/*" capture="environment" onChange={handlePhoto} />
+      <input ref={fileInputRef} hidden type="file" accept="image/*" onChange={handlePhoto} />
 
       <header className="nav-title">
         <button className="round-button ghost" onClick={() => go(isEditing ? "ready" : "home")}><ArrowLeft size={21} /></button>
@@ -5754,7 +5753,7 @@ function BottomNav({ go, active = "home" }) {
     <nav className="bottom-nav">
       <button className={active === "home" ? "active" : ""} onClick={() => go("home")}><HomeIcon size={20} /><span>início</span></button>
       <button className={active === "dashboard" ? "active" : ""} onClick={() => go("dashboard")}><FileText size={20} /><span>painel</span></button>
-      <button className="camera-tab" onClick={() => go("new")}><Camera size={23} /></button>
+      <button className="camera-tab" aria-label="novo orçamento" onClick={() => go("new")}><Plus size={26} strokeWidth={2.8} /></button>
       <button className={active === "customers" ? "active" : ""} onClick={() => go("customers")}><Users size={20} /><span>clientes</span></button>
       <button className={active === "settings" ? "active" : ""} onClick={() => go("settings")}><Settings size={20} /><span>ajustes</span></button>
     </nav>
