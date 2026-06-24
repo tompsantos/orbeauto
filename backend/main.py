@@ -1747,6 +1747,8 @@ def build_giss_rps_lab_xml(order: Order, document: FiscalDocument, settings: Fis
     giss_tag(servico, NS_TIPOS, "CodigoTributacaoMunicipio", settings.service_code or "14.12")
     giss_tag(servico, NS_TIPOS, "Discriminacao", service.get("description"))
     giss_tag(servico, NS_TIPOS, "CodigoMunicipio", giss_city_code(settings.provider_city, settings.provider_state))
+    # CodigoPais=1058 (Brasil) deve ficar entre CodigoMunicipio e ExigibilidadeISS (XSD tcDadosServico)
+    giss_tag(servico, NS_TIPOS, "CodigoPais", "1058")
     giss_tag(servico, NS_TIPOS, "ExigibilidadeISS", "1")
     giss_tag(servico, NS_TIPOS, "MunicipioIncidencia", giss_city_code(settings.provider_city, settings.provider_state))
 
@@ -1788,7 +1790,8 @@ def build_giss_rps_lab_xml(order: Order, document: FiscalDocument, settings: Fis
 
     regime_especial = giss_clean(getattr(settings, "special_tax_regime", ""))
     if regime_especial in {"1", "2", "3", "4", "5", "6"}:
-        giss_tag(inf, "RegimeEspecialTributacao", regime_especial)
+        # Namespace correto para RegimeEspecialTributacao
+        giss_tag(inf, NS_TIPOS, "RegimeEspecialTributacao", regime_especial)
     giss_tag(inf, NS_TIPOS, "OptanteSimplesNacional", "1" if settings.simple_national else "2")
     giss_tag(inf, NS_TIPOS, "IncentivoFiscal", "2")
 
@@ -2328,6 +2331,10 @@ def giss_xmlsec_sign_file(input_path, output_path, key_path, cert_path, node_xpa
 
 
 def giss_xmlsec_ensure_codigo_pais(root):
+    """Garante que CodigoPais=1058 esteja presente no bloco Servico.
+    O gerador build_giss_rps_lab_xml já insere CodigoPais na posição correta;
+    esta função é mantida como verificação de segurança para XMLs legados.
+    """
     from lxml import etree
 
     tipos_ns = "http://www.giss.com.br/tipos-v2_04.xsd"
@@ -2342,6 +2349,7 @@ def giss_xmlsec_ensure_codigo_pais(root):
 
     for servico in root.xpath("//*[local-name()='Servico']"):
         if has_child(servico, "CodigoPais"):
+            # já presente (inserido pelo gerador) — não duplicar
             continue
 
         children = list(servico)
@@ -2819,11 +2827,26 @@ def fiscal_giss_send_preview(
 def fiscal_giss_send_lab(
     order_id: str,
     confirm: str = "",
+    skip_xsd: bool = False,
     user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
     order, document, settings, signed_xml = giss_prepare_signed_rps_for_order(db, user, order_id)
     allowed_order_id = giss_allowed_real_send_order_id()
+
+    # Validação XSD local antes de qualquer envio real
+    if not skip_xsd:
+        xsd_result = giss_validate_xml_against_xsd(signed_xml)
+        if xsd_result.get("xsd_available") and xsd_result.get("ok") is False:
+            return {
+                "ok": False,
+                "blocked": True,
+                "reason": "xml_invalido_xsd",
+                "message": "o XML gerado não passou na validação XSD local; corrija antes de enviar ao GISS",
+                "order_id": order.id,
+                "fiscal_document_id": document.id,
+                "xsd_errors": xsd_result.get("errors", []),
+            }
 
     if giss_document_already_sent(document):
         return {
@@ -3161,6 +3184,64 @@ def fiscal_order_status(
     }
 
 
+def giss_validate_xml_against_xsd(xml_value):
+    """Valida o XML gerado contra o schema XSD oficial do GISS.
+    Retorna dict com ok, errors e warnings.
+    Muda o cwd temporariamente para o diretório dos XSDs para resolver imports.
+    """
+    import os
+    from lxml import etree
+
+    xsd_dir = os.path.join(os.path.dirname(__file__), "fiscal", "xsd")
+    schema_file = os.path.join(xsd_dir, "enviar-lote-rps-envio-v2_04.xsd")
+
+    if not os.path.exists(schema_file):
+        return {
+            "ok": None,
+            "xsd_available": False,
+            "errors": [],
+            "warnings": ["XSD não encontrado em " + xsd_dir],
+        }
+
+    original_dir = os.getcwd()
+    try:
+        os.chdir(xsd_dir)
+        schema_doc = etree.parse("enviar-lote-rps-envio-v2_04.xsd")
+        schema = etree.XMLSchema(schema_doc)
+
+        raw = giss_as_text(xml_value).encode("utf-8")
+        xml_doc = etree.fromstring(raw)
+
+        is_valid = schema.validate(xml_doc)
+        errors = [
+            {"message": e.message, "line": e.line, "column": e.column}
+            for e in schema.error_log
+        ]
+
+        return {
+            "ok": is_valid,
+            "xsd_available": True,
+            "errors": errors,
+            "warnings": [],
+        }
+    except etree.XMLSchemaParseError as e:
+        return {
+            "ok": False,
+            "xsd_available": True,
+            "errors": [{"message": str(e), "line": 0, "column": 0}],
+            "warnings": ["Erro ao carregar schema XSD"],
+        }
+    except Exception as e:
+        return {
+            "ok": False,
+            "xsd_available": True,
+            "errors": [{"message": str(e), "line": 0, "column": 0}],
+            "warnings": [],
+        }
+    finally:
+        os.chdir(original_dir)
+
+
 @app.post("/orders/{order_id}/fiscal/preflight")
 def fiscal_order_preflight(
     order_id: str,
@@ -3170,16 +3251,25 @@ def fiscal_order_preflight(
     order, document, settings, signed_xml = giss_prepare_signed_rps_for_order(db, user, order_id)
     text = giss_as_text(signed_xml)
 
+    xsd_result = giss_validate_xml_against_xsd(text)
+    xsd_ok = xsd_result.get("ok")
+    xsd_errors = xsd_result.get("errors", [])
+
     return {
-        "ok": True,
+        "ok": xsd_ok is not False,
         "mode": "preflight",
         "message": "pré-validação fiscal concluída; nada foi enviado ao Giss",
         "order_id": order.id,
         "order_finished": giss_order_is_finished(order),
         "real_send_enabled": giss_real_send_enabled(),
+        "fiscal_document_id": document.id,
         "fiscal_document": giss_fiscal_document_public_payload(document),
         "xml_size_bytes": len(text.encode("utf-8")),
         "signature_count": giss_count_signature_nodes(text),
+        "xsd_valid": xsd_ok,
+        "xsd_available": xsd_result.get("xsd_available"),
+        "xsd_errors": xsd_errors,
+        "xsd_warnings": xsd_result.get("warnings", []),
     }
 
 
@@ -3187,16 +3277,176 @@ def fiscal_order_preflight(
 def fiscal_order_issue(
     order_id: str,
     confirm: str = "",
+    skip_xsd: bool = False,
     user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
+    """Emite a NFS-e via GISS. Requer GISS_ALLOW_REAL_SEND=true e confirm=EMITIR_NFSE_REAL.
+    Valida o XML contra XSD antes de enviar (use skip_xsd=true apenas para debug).
+    """
     return fiscal_giss_send_lab(
         order_id=order_id,
         confirm=confirm,
+        skip_xsd=skip_xsd,
         user=user,
         db=db,
     )
 
+
+
+def giss_build_consultar_lote_rps_xml(protocolo, cnpj, inscricao_municipal):
+    """Gera o XML ConsultarLoteRpsEnvio conforme XSD consultar-lote-rps-envio-v2_04.xsd.
+    Estrutura: Prestador (CpfCnpj + InscricaoMunicipal), Protocolo.
+    """
+    protocolo = giss_clean(protocolo)
+    cnpj = giss_digits(cnpj)
+    im = giss_clean(inscricao_municipal)
+
+    if not protocolo:
+        raise ValueError("Protocolo obrigatório para ConsultarLoteRps")
+    if not cnpj:
+        raise ValueError("CNPJ do prestador obrigatório para ConsultarLoteRps")
+
+    return f"""<?xml version="1.0" encoding="UTF-8"?>
+<p:ConsultarLoteRpsEnvio
+  xmlns:p="http://www.giss.com.br/consultar-lote-rps-envio-v2_04.xsd"
+  xmlns:p1="http://www.giss.com.br/tipos-v2_04.xsd"
+  xmlns:ds="http://www.w3.org/2000/09/xmldsig#">
+  <p:Prestador>
+    <p1:CpfCnpj>
+      <p1:Cnpj>{cnpj}</p1:Cnpj>
+    </p1:CpfCnpj>
+    <p1:InscricaoMunicipal>{im}</p1:InscricaoMunicipal>
+  </p:Prestador>
+  <p:Protocolo>{protocolo}</p:Protocolo>
+</p:ConsultarLoteRpsEnvio>""".strip()
+
+
+def giss_process_consultar_lote_response(output_xml, db, document):
+    """Processa o retorno de ConsultarLoteRps e atualiza o FiscalDocument.
+    Retorna dict com status, nfse_number, nfse_verification_code e mensagens.
+    """
+    import xml.etree.ElementTree as ET
+
+    if not output_xml:
+        return {
+            "status": "sem_retorno",
+            "nfse_number": None,
+            "nfse_verification_code": None,
+            "messages": [],
+            "situacao": None,
+        }
+
+    try:
+        root = ET.fromstring(output_xml)
+    except Exception as e:
+        return {
+            "status": "erro_parse",
+            "nfse_number": None,
+            "nfse_verification_code": None,
+            "messages": [{"Codigo": "PARSE", "Mensagem": str(e)}],
+            "situacao": None,
+        }
+
+    situacao = giss_extract_first_text(output_xml, ["Situacao"])
+    nfse_number = giss_extract_first_text(output_xml, ["Numero", "NumeroNfse"])
+    verification = giss_extract_first_text(output_xml, ["CodigoVerificacao"])
+    messages = giss_extract_messages(output_xml)
+
+    # Determina status baseado na Situacao e dados extraidos
+    # Situacao: 1=Não Recebido, 2=Não Processado, 3=Processado com Erro, 4=Processado com Sucesso
+    if nfse_number:
+        new_status = "autorizado"
+    elif situacao == "4":
+        new_status = "autorizado"
+    elif situacao == "3":
+        new_status = "erro_giss"
+    elif situacao in {"1", "2"}:
+        new_status = "processando"
+    elif messages:
+        new_status = "erro_giss"
+    else:
+        new_status = "retorno_giss"
+
+    # Atualiza o documento
+    document.giss_last_operation = "ConsultarLoteRps"
+    document.giss_response_xml = output_xml
+    document.giss_messages_json = __import__("json").dumps(messages, ensure_ascii=False)
+    document.giss_response_at = now()
+    document.status = new_status
+
+    if nfse_number:
+        document.nfse_number = nfse_number
+
+    if verification:
+        document.nfse_verification_code = verification
+
+    db.add(document)
+    db.commit()
+    db.refresh(document)
+
+    return {
+        "status": new_status,
+        "situacao": situacao,
+        "nfse_number": nfse_number or None,
+        "nfse_verification_code": verification or None,
+        "messages": messages,
+    }
+
+
+@app.post("/orders/{order_id}/fiscal/consult")
+def fiscal_order_consult(
+    order_id: str,
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Consulta o status do lote enviado ao GISS via ConsultarLoteRps.
+    Requer que o FiscalDocument tenha giss_protocol preenchido.
+    Atualiza o status e, se aprovado, salva o número da NFS-e.
+    """
+    require_fiscal_feature(user)
+
+    order = get_scoped_order_or_404(db, user, order_id)
+    document = get_existing_fiscal_document(db, user, order.id)
+
+    if not document:
+        raise HTTPException(status_code=404, detail="rascunho fiscal não encontrado para este orçamento")
+
+    protocol = giss_clean(getattr(document, "giss_protocol", ""))
+    if not protocol:
+        return {
+            "ok": False,
+            "blocked": True,
+            "reason": "sem_protocolo",
+            "message": "não há protocolo GISS salvo; emita a nota primeiro via POST /orders/{order_id}/fiscal/issue",
+            "order_id": order.id,
+            "fiscal_document": giss_fiscal_document_public_payload(document),
+        }
+
+    settings = get_or_create_fiscal_settings(db, user.workshop)
+    cnpj = giss_digits(settings.provider_cnpj or order.workshop.cnpj)
+    im = giss_clean(settings.provider_municipal_registration)
+
+    try:
+        dados_xml = giss_build_consultar_lote_rps_xml(protocol, cnpj, im)
+    except ValueError as e:
+        raise HTTPException(status_code=422, detail=str(e))
+
+    result = giss_soap_call("ConsultarLoteRps", dados_xml)
+    consult_result = giss_process_consultar_lote_response(result["output_xml"], db, document)
+
+    return {
+        "ok": consult_result["status"] in {"autorizado"},
+        "order_id": order.id,
+        "fiscal_document": giss_fiscal_document_public_payload(document),
+        "http_status": result["http_status"],
+        "situacao_giss": consult_result["situacao"],
+        "status": consult_result["status"],
+        "nfse_number": consult_result["nfse_number"],
+        "nfse_verification_code": consult_result["nfse_verification_code"],
+        "technical_messages": consult_result["messages"],
+        "output_xml_preview": (result["output_xml"] or "")[:3000],
+    }
 
 
 def giss_c14n_node(node):
