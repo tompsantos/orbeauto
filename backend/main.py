@@ -12,7 +12,7 @@ from reportlab.lib.pagesizes import A4
 from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
 from reportlab.lib.units import mm
 from reportlab.platypus import Image as RLImage
-from reportlab.platypus import Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle
+from reportlab.platypus import PageBreak, Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle
 
 import json
 import os
@@ -4523,6 +4523,78 @@ def build_order_pdf(order: Order, workshop: Workshop):
 
         return content
 
+    # orbeauto-photo-pdf-v1
+    def pdf_photo_flowable(photo, max_width=54 * mm, max_height=31 * mm):
+        file_path = upload_local_path(getattr(photo, "url", "") or getattr(photo, "filename", ""))
+
+        if not file_path:
+            return None
+
+        return fitted_image(file_path, max_width, max_height)
+
+    def pdf_photo_cell(photo, index, title):
+        image = pdf_photo_flowable(photo)
+
+        if image:
+            return [
+                image,
+                Spacer(1, 1.5 * mm),
+                p(f"{title} {index + 1}", "pdfCenter"),
+            ]
+
+        return [
+            p(f"{title} {index + 1}", "pdfSmallCaps"),
+            p("foto indisponível no arquivo local", "pdfNote"),
+        ]
+
+    def append_photo_section(title, photos, empty_message):
+        story.append(Paragraph(title, styles["pdfSectionTitle"]))
+
+        if not photos:
+            empty_table = Table(
+                [[p(empty_message, "pdfNote")]],
+                colWidths=[182 * mm],
+            )
+            empty_table.setStyle(TableStyle([
+                ("BOX", (0, 0), (-1, -1), 0.35, colors.HexColor("#E4E7EC")),
+                ("BACKGROUND", (0, 0), (-1, -1), colors.HexColor("#F9FAFB")),
+                ("LEFTPADDING", (0, 0), (-1, -1), 10),
+                ("RIGHTPADDING", (0, 0), (-1, -1), 10),
+                ("TOPPADDING", (0, 0), (-1, -1), 8),
+                ("BOTTOMPADDING", (0, 0), (-1, -1), 8),
+            ]))
+            story.append(empty_table)
+            return
+
+        selected = list(photos)[:6]
+        cells = [
+            pdf_photo_cell(photo, index, title)
+            for index, photo in enumerate(selected)
+        ]
+
+        while len(cells) % 3:
+            cells.append("")
+
+        rows = [cells[index:index + 3] for index in range(0, len(cells), 3)]
+
+        table = Table(
+            rows,
+            colWidths=[60.6 * mm, 60.6 * mm, 60.6 * mm],
+        )
+        table.setStyle(TableStyle([
+            ("BOX", (0, 0), (-1, -1), 0.4, colors.HexColor("#E4E7EC")),
+            ("INNERGRID", (0, 0), (-1, -1), 0.25, colors.HexColor("#E4E7EC")),
+            ("BACKGROUND", (0, 0), (-1, -1), colors.HexColor("#FFFFFF")),
+            ("LEFTPADDING", (0, 0), (-1, -1), 5),
+            ("RIGHTPADDING", (0, 0), (-1, -1), 5),
+            ("TOPPADDING", (0, 0), (-1, -1), 6),
+            ("BOTTOMPADDING", (0, 0), (-1, -1), 6),
+            ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+            ("ALIGN", (0, 0), (-1, -1), "CENTER"),
+        ]))
+
+        story.append(table)
+
     customer = order.customer
     vehicle = order.vehicle
 
@@ -4825,6 +4897,27 @@ def build_order_pdf(order: Order, workshop: Workshop):
     ]))
 
     story.append(note_table)
+
+    before_photos = [
+        photo
+        for photo in (order.photos or [])
+        if normalize_photo_label(getattr(photo, "label", "")) == "before"
+    ]
+    after_photos = [
+        photo
+        for photo in (order.photos or [])
+        if normalize_photo_label(getattr(photo, "label", "")) == "after"
+    ]
+
+    if before_photos or after_photos:
+        story.append(PageBreak())
+        story.append(Paragraph("registro fotográfico", styles["pdfSectionTitle"]))
+        story.append(p("Fotos anexadas ao orçamento para documentação visual do veículo e do serviço executado.", "pdfNote"))
+        story.append(Spacer(1, 5 * mm))
+
+        append_photo_section("fotos do antes", before_photos, "sem fotos do antes anexadas.")
+        story.append(Spacer(1, 7 * mm))
+        append_photo_section("fotos do depois", after_photos, "sem fotos do depois anexadas.")
 
     def footer(canvas, document):
         canvas.saveState()
