@@ -2901,7 +2901,7 @@ function ProductionPhotoPanel({
             <input
               type="file"
               accept="image/*"
-              capture="environment"
+             
               onChange={(event) => upload(stageName, event)}
             />
           </label>
