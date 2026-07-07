@@ -8814,3 +8814,368 @@ button:disabled {
 button:disabled:active {
   transform: none;
 }
+
+
+/* ==========================================================================
+   orbeauto build 2.0 — refinamento visual premium (camada incremental)
+   melhora hierarquia, respiro e acabamento sem alterar estrutura/fluxo
+   ========================================================================== */
+
+/* --- hero "novo orçamento": mais presença e leitura --- */
+.hero-action {
+  border: 1px solid rgba(255, 255, 255, 0.14);
+}
+
+.hero-action strong {
+  font-size: 24px;
+  letter-spacing: -0.75px;
+}
+
+.hero-action small {
+  color: rgba(255, 255, 255, 0.82);
+  font-weight: 500;
+}
+
+/* --- métricas: ícone dentro de chip, valores mais fortes --- */
+.metric {
+  padding: 15px 14px;
+  border: 1px solid rgba(226, 232, 240, 0.9);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.9),
+    0 10px 24px rgba(15, 23, 42, 0.045);
+}
+
+.metric > span {
+  width: 42px;
+  height: 42px;
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+  border-radius: 14px;
+  background: var(--blue-soft);
+  box-shadow: inset 0 0 0 1px rgba(10, 91, 224, 0.06);
+}
+
+.metric.tone-green > span {
+  background: var(--green-soft);
+}
+
+.metric.tone-purple > span {
+  background: rgba(122, 90, 248, 0.1);
+}
+
+.metric.tone-orange > span {
+  background: rgba(247, 144, 9, 0.1);
+}
+
+.metric.metric-muted > span {
+  background: #eef1f5;
+}
+
+.metric p {
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: -0.1px;
+}
+
+.metric strong {
+  font-size: 26px;
+  letter-spacing: -0.9px;
+}
+
+/* --- cards de orçamento recente: mais respiro e clareza --- */
+.recent-item {
+  padding: 13px 12px;
+  border-color: rgba(226, 232, 240, 0.92);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.85),
+    0 8px 20px rgba(15, 23, 42, 0.03);
+}
+
+.recent-item:active {
+  border-color: rgba(10, 91, 224, 0.25);
+}
+
+.car-badge {
+  width: 44px;
+  height: 44px;
+  border-radius: 14px;
+  box-shadow: inset 0 0 0 1px rgba(10, 91, 224, 0.06);
+}
+
+.recent-copy strong {
+  font-size: 15.5px;
+  letter-spacing: -0.2px;
+}
+
+.recent-right strong {
+  font-size: 16px;
+  letter-spacing: -0.35px;
+  color: var(--dark);
+}
+
+/* --- status pills: cobertura de todos os estados --- */
+.status-pill {
+  height: 25px;
+  font-size: 11px;
+  letter-spacing: 0.01em;
+}
+
+.status-pill.enviado {
+  color: #0a5be0;
+  background: var(--blue-soft);
+  border-color: rgba(10, 91, 224, 0.15);
+}
+
+.status-pill.rascunho {
+  color: #596272;
+  background: #eef1f5;
+  border-color: rgba(89, 98, 114, 0.12);
+}
+
+.status-pill.em-aberto {
+  color: #b45309;
+  background: rgba(247, 144, 9, 0.12);
+  border-color: rgba(247, 144, 9, 0.2);
+}
+
+.status-pill.cancelado {
+  color: #b42318;
+  background: rgba(240, 68, 56, 0.1);
+  border-color: rgba(240, 68, 56, 0.18);
+}
+
+/* --- stats-card: números com mais peso --- */
+.stats-card {
+  border: 1px solid rgba(226, 232, 240, 0.9);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.85),
+    0 10px 26px rgba(15, 23, 42, 0.045);
+}
+
+.stats-card strong {
+  color: var(--blue);
+}
+
+.stats-card div:first-child strong {
+  color: var(--dark);
+}
+
+/* --- menu inferior: acabamento e active state mais claros --- */
+.bottom-nav {
+  gap: 2px;
+  padding: 8px 8px;
+  border: 1px solid rgba(255, 255, 255, 0.7);
+  box-shadow: 0 20px 60px rgba(24, 38, 64, 0.2);
+}
+
+.bottom-nav button {
+  gap: 4px;
+  font-size: 10.5px;
+  font-weight: 650;
+  transition: color 0.18s ease, background 0.18s ease;
+}
+
+.bottom-nav button.active {
+  color: var(--blue);
+  background: var(--blue-soft);
+  font-weight: 760;
+}
+
+.bottom-nav .camera-tab {
+  background:
+    radial-gradient(circle at 30% 20%, rgba(255, 255, 255, 0.28), transparent 40%),
+    linear-gradient(135deg, #0454d8, #0878ff);
+  box-shadow: 0 16px 34px rgba(10, 91, 224, 0.34);
+}
+
+.bottom-nav .camera-tab:active {
+  transform: scale(0.94);
+}
+
+/* --- estado vazio: ícone em chip --- */
+.empty-state > svg {
+  width: 44px;
+  height: 44px;
+  padding: 11px;
+  color: var(--blue);
+  background: var(--blue-soft);
+  border-radius: 15px;
+  box-sizing: content-box;
+  margin-bottom: 4px;
+}
+
+/* ==========================================================================
+   tela fiscal — módulo em preparação (visual vendável)
+   ========================================================================== */
+
+.fiscal-hero {
+  margin: 16px 0;
+  padding: 20px;
+  border: 1px solid rgba(255, 255, 255, 0.8);
+  border-radius: var(--radius-xl);
+  background:
+    radial-gradient(circle at 88% 8%, rgba(10, 91, 224, 0.1), transparent 42%),
+    var(--card);
+  box-shadow: var(--shadow-soft);
+  backdrop-filter: blur(22px);
+}
+
+.fiscal-hero-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 15px;
+}
+
+.fiscal-hero-icon {
+  width: 50px;
+  height: 50px;
+  display: grid;
+  place-items: center;
+  color: var(--blue);
+  background: var(--blue-soft);
+  border-radius: 16px;
+  box-shadow: inset 0 0 0 1px rgba(10, 91, 224, 0.08);
+}
+
+.fiscal-hero-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  height: 26px;
+  padding: 0 11px;
+  color: #b45309;
+  background: rgba(247, 144, 9, 0.12);
+  border: 1px solid rgba(247, 144, 9, 0.22);
+  border-radius: 999px;
+  font-size: 11.5px;
+  font-weight: 760;
+}
+
+.fiscal-hero h2 {
+  margin: 0;
+  color: var(--dark);
+  font-size: 22px;
+  font-weight: 760;
+  letter-spacing: -0.7px;
+}
+
+.fiscal-hero p {
+  margin: 8px 0 0;
+  color: var(--muted);
+  font-size: 14px;
+  line-height: 1.55;
+}
+
+.fiscal-list {
+  display: grid;
+  gap: 10px;
+  margin: 16px 0;
+}
+
+.fiscal-row {
+  display: grid;
+  grid-template-columns: 46px 1fr auto;
+  align-items: center;
+  gap: 13px;
+  padding: 14px;
+  border: 1px solid rgba(226, 232, 240, 0.92);
+  background: var(--card);
+  border-radius: var(--radius-lg);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.85),
+    0 8px 20px rgba(15, 23, 42, 0.03);
+  backdrop-filter: blur(22px);
+}
+
+.fiscal-row-icon {
+  width: 46px;
+  height: 46px;
+  display: grid;
+  place-items: center;
+  color: var(--blue);
+  background: var(--blue-soft);
+  border-radius: 14px;
+  box-shadow: inset 0 0 0 1px rgba(10, 91, 224, 0.06);
+}
+
+.fiscal-row.tone-green .fiscal-row-icon {
+  color: var(--green);
+  background: var(--green-soft);
+}
+
+.fiscal-row.tone-purple .fiscal-row-icon {
+  color: var(--purple);
+  background: rgba(122, 90, 248, 0.1);
+}
+
+.fiscal-row.tone-orange .fiscal-row-icon {
+  color: var(--orange);
+  background: rgba(247, 144, 9, 0.1);
+}
+
+.fiscal-row-copy {
+  min-width: 0;
+}
+
+.fiscal-row-copy strong {
+  display: block;
+  color: var(--dark);
+  font-size: 15.5px;
+  font-weight: 720;
+  letter-spacing: -0.25px;
+}
+
+.fiscal-row-copy p {
+  margin: 3px 0 0;
+  color: var(--muted);
+  font-size: 12.5px;
+  line-height: 1.4;
+}
+
+.fiscal-row-chip {
+  display: inline-flex;
+  align-items: center;
+  height: 24px;
+  padding: 0 10px;
+  color: var(--soft);
+  background: #eef1f5;
+  border: 1px solid rgba(148, 163, 184, 0.22);
+  border-radius: 999px;
+  font-size: 10.5px;
+  font-weight: 760;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.fiscal-note {
+  display: flex;
+  align-items: flex-start;
+  gap: 11px;
+  padding: 15px;
+  margin: 20px 0 16px;
+  border: 1px solid rgba(10, 91, 224, 0.14);
+  background: rgba(10, 91, 224, 0.05);
+  border-radius: var(--radius-lg);
+}
+
+.fiscal-note-icon {
+  flex: 0 0 auto;
+  width: 32px;
+  height: 32px;
+  display: grid;
+  place-items: center;
+  color: var(--blue);
+  background: rgba(10, 91, 224, 0.1);
+  border-radius: 10px;
+}
+
+.fiscal-note p {
+  margin: 0;
+  color: var(--text);
+  font-size: 13px;
+  line-height: 1.55;
+}

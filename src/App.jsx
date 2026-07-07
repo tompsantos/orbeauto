@@ -5750,55 +5750,69 @@ function CustomerDetailScreen({ go, customer, openBudget, onNewOrder }) {
 }
 
 function FiscalScreen({ go, workshop }) {
+  const fiscalModules = [
+    {
+      tone: "blue",
+      icon: <FileText size={22} />,
+      title: "nota fiscal",
+      desc: "emissão de NFS-e direto do orçamento"
+    },
+    {
+      tone: "green",
+      icon: <ReceiptText size={22} />,
+      title: "recibo",
+      desc: "recibos de serviço em pdf para o cliente"
+    },
+    {
+      tone: "purple",
+      icon: <ShieldCheck size={22} />,
+      title: "seguradora",
+      desc: "documentos e franquia para sinistros"
+    },
+    {
+      tone: "orange",
+      icon: <Flag size={22} />,
+      title: "fechamento",
+      desc: "relatório de fechamento do serviço"
+    }
+  ];
+
   return (
     <main className="screen fiscal-screen">
       <header className="nav-title">
         <button className="round-button ghost" onClick={() => go("home")}><ArrowLeft size={21} /></button>
         <div>
-          <h1>documentos fiscais</h1>
-          <p>em desenvolvimento</p>
+          <h1>fiscal</h1>
+          <p>módulo em preparação</p>
         </div>
         <span className="nav-spacer" />
       </header>
 
-      <section className="fiscal-intro">
-        <div className="fiscal-icon"><FileText size={32} /></div>
+      <section className="fiscal-hero">
+        <div className="fiscal-hero-top">
+          <span className="fiscal-hero-icon"><FileText size={26} /></span>
+          <span className="fiscal-hero-tag"><Clock3 size={13} /> em preparação</span>
+        </div>
         <h2>módulo fiscal</h2>
-        <p>Gerencie notas fiscais, recibos e documentação de seguradoras em um só lugar.</p>
+        <p>Emita notas, recibos e documentos de seguradora sem sair do orçamento. Estamos finalizando esta etapa para a sua oficina.</p>
       </section>
 
-      <div className="fiscal-cards">
-        <div className="fiscal-card">
-          <div className="fiscal-card-icon"><FileText size={24} /></div>
-          <strong>nota fiscal</strong>
-          <p>emissão de NFS-e</p>
-          <span className="badge-beta">em breve</span>
-        </div>
-
-        <div className="fiscal-card">
-          <div className="fiscal-card-icon" style={{ color: "var(--green)" }}><ReceiptText size={24} /></div>
-          <strong>recibo</strong>
-          <p>recibos de serviço</p>
-          <span className="badge-beta">em breve</span>
-        </div>
-
-        <div className="fiscal-card">
-          <div className="fiscal-card-icon" style={{ color: "var(--purple)" }}><ShieldCheck size={24} /></div>
-          <strong>seguradora</strong>
-          <p>documentos de franquia</p>
-          <span className="badge-beta">em breve</span>
-        </div>
-
-        <div className="fiscal-card">
-          <div className="fiscal-card-icon" style={{ color: "var(--orange)" }}><Flag size={24} /></div>
-          <strong>fechamento</strong>
-          <p>fechamento de serviço</p>
-          <span className="badge-beta">em breve</span>
-        </div>
+      <div className="fiscal-list">
+        {fiscalModules.map((item) => (
+          <div className={cx("fiscal-row", `tone-${item.tone}`)} key={item.title}>
+            <span className="fiscal-row-icon">{item.icon}</span>
+            <div className="fiscal-row-copy">
+              <strong>{item.title}</strong>
+              <p>{item.desc}</p>
+            </div>
+            <span className="fiscal-row-chip">em breve</span>
+          </div>
+        ))}
       </div>
 
       <section className="fiscal-note">
-        <p>Este módulo está em desenvolvimento. Em breve você poderá gerenciar toda a documentação fiscal da sua oficina aqui.</p>
+        <span className="fiscal-note-icon"><Bell size={16} /></span>
+        <p>Você será avisado assim que o módulo fiscal estiver disponível. Nenhuma configuração é necessária agora.</p>
       </section>
 
       <BottomNav go={go} active="fiscal" />
