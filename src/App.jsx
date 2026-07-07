@@ -2564,8 +2564,8 @@ function HomeScheduleBoard({
       <section className="paper-agenda-board panel paper-agenda-empty">
         <div>
           <span>agenda de entrada</span>
-          <strong>nenhum veículo aprovado agendado</strong>
-          <p>quando um orçamento for aprovado, ele aparece aqui para ganhar data de entrada.</p>
+          <strong>nenhum veículo agendado</strong>
+          <p>quando um orçamento for aprovado, ele aparece aqui para agendar a entrada.</p>
         </div>
       </section>
     );
@@ -3212,7 +3212,7 @@ function Home({ go, budgets, openBudget, onDeleteBudget, workshop, user, onLogou
         </div>
       </section>
 
-            <AutoDraftCard go={go} />
+      <AutoDraftCard go={go} />
 
       <button className="hero-action" onClick={() => go("new")}>
         <span className="hero-icon"><Plus size={30} /></span>
@@ -3224,10 +3224,10 @@ function Home({ go, budgets, openBudget, onDeleteBudget, workshop, user, onLogou
       </button>
 
       <section className="metric-grid">
-        <Metric icon={<FileText size={20} />} label="em aberto" value={budgets.filter((b) => b.status === "em aberto").length} />
-        <Metric icon={<CheckCircle2 size={20} />} label="aprovados" value={budgets.filter((b) => b.status === "aprovado").length} tone="green" />
-        <Metric icon={<ShieldCheck size={20} />} label="seguradora" value={budgets.filter((b) => b.osType === "seguradora").length} tone="purple" />
-        <Metric icon={<Flag size={20} />} label="finalizados" value={budgets.filter((b) => b.status === "finalizado").length} tone="orange" />
+        <Metric icon={<FileText size={20} />} label="em aberto" value={budgets.filter((b) => b.status === "em aberto").length} onClick={() => setFilter("em aberto")} />
+        <Metric icon={<CheckCircle2 size={20} />} label="aprovados" value={budgets.filter((b) => b.status === "aprovado").length} tone="green" onClick={() => setFilter("aprovado")} />
+        <Metric icon={<ShieldCheck size={20} />} label="seguradora" value={budgets.filter((b) => b.osType === "seguradora").length} tone="purple" onClick={() => setFilter("seguradora")} />
+        <Metric icon={<Flag size={20} />} label="finalizados" value={budgets.filter((b) => b.status === "finalizado").length} tone="orange" onClick={() => setFilter("finalizado")} />
         <Metric icon={<Users size={20} />} label="clientes" value={new Set(budgets.map((b) => b.customer?.name)).size} />
         <Metric icon={<Zap size={20} />} label="produção" value="" muted onClick={() => go("production")} />
       </section>
@@ -3292,8 +3292,8 @@ function Home({ go, budgets, openBudget, onDeleteBudget, workshop, user, onLogou
           {filteredBudgets.length === 0 && (
             <div className="empty-state">
               <Search size={21} />
-              <strong>nenhum orçamento ainda</strong>
-              <p>cria o primeiro orçamento real dessa oficina.</p>
+              <strong>nenhum orçamento encontrado</strong>
+              <p>comece criando um novo orçamento ou ajuste os filtros acima.</p>
             </div>
           )}
         </div>
@@ -5701,7 +5701,7 @@ function CustomerDetailScreen({ go, customer, openBudget, onNewOrder }) {
           ))}
 
           {vehicles.length === 0 && (
-            <p>nenhum veículo vinculado ainda.</p>
+            <p style={{ color: "var(--muted)", fontSize: "13px", margin: "12px 0" }}>nenhum veículo registrado para este cliente.</p>
           )}
         </div>
       </SummaryCard>
@@ -5730,7 +5730,7 @@ function CustomerDetailScreen({ go, customer, openBudget, onNewOrder }) {
           ))}
 
           {orders.length === 0 && (
-            <p>nenhum orçamento para esse cliente ainda.</p>
+            <p style={{ color: "var(--muted)", fontSize: "13px", margin: "12px 0" }}>nenhum orçamento criado para este cliente ainda.</p>
           )}
         </div>
       </SummaryCard>
@@ -5749,6 +5749,63 @@ function CustomerDetailScreen({ go, customer, openBudget, onNewOrder }) {
   );
 }
 
+function FiscalScreen({ go, workshop }) {
+  return (
+    <main className="screen fiscal-screen">
+      <header className="nav-title">
+        <button className="round-button ghost" onClick={() => go("home")}><ArrowLeft size={21} /></button>
+        <div>
+          <h1>documentos fiscais</h1>
+          <p>em desenvolvimento</p>
+        </div>
+        <span className="nav-spacer" />
+      </header>
+
+      <section className="fiscal-intro">
+        <div className="fiscal-icon"><FileText size={32} /></div>
+        <h2>módulo fiscal</h2>
+        <p>Gerencie notas fiscais, recibos e documentação de seguradoras em um só lugar.</p>
+      </section>
+
+      <div className="fiscal-cards">
+        <div className="fiscal-card">
+          <div className="fiscal-card-icon"><FileText size={24} /></div>
+          <strong>nota fiscal</strong>
+          <p>emissão de NFS-e</p>
+          <span className="badge-beta">em breve</span>
+        </div>
+
+        <div className="fiscal-card">
+          <div className="fiscal-card-icon" style={{ color: "var(--green)" }}><ReceiptText size={24} /></div>
+          <strong>recibo</strong>
+          <p>recibos de serviço</p>
+          <span className="badge-beta">em breve</span>
+        </div>
+
+        <div className="fiscal-card">
+          <div className="fiscal-card-icon" style={{ color: "var(--purple)" }}><ShieldCheck size={24} /></div>
+          <strong>seguradora</strong>
+          <p>documentos de franquia</p>
+          <span className="badge-beta">em breve</span>
+        </div>
+
+        <div className="fiscal-card">
+          <div className="fiscal-card-icon" style={{ color: "var(--orange)" }}><Flag size={24} /></div>
+          <strong>fechamento</strong>
+          <p>fechamento de serviço</p>
+          <span className="badge-beta">em breve</span>
+        </div>
+      </div>
+
+      <section className="fiscal-note">
+        <p>Este módulo está em desenvolvimento. Em breve você poderá gerenciar toda a documentação fiscal da sua oficina aqui.</p>
+      </section>
+
+      <BottomNav go={go} active="fiscal" />
+    </main>
+  );
+}
+
 function BottomNav({ go, active = "home" }) {
   return (
     <nav className="bottom-nav">
@@ -5756,7 +5813,7 @@ function BottomNav({ go, active = "home" }) {
       <button className={active === "dashboard" ? "active" : ""} onClick={() => go("dashboard")}><FileText size={20} /><span>painel</span></button>
       <button className="camera-tab" onClick={() => go("new")}><Camera size={23} /></button>
       <button className={active === "customers" ? "active" : ""} onClick={() => go("customers")}><Users size={20} /><span>clientes</span></button>
-      <button className={active === "settings" ? "active" : ""} onClick={() => go("settings")}><Settings size={20} /><span>ajustes</span></button>
+      <button className={active === "fiscal" ? "active" : ""} onClick={() => go("fiscal")}><ReceiptText size={20} /><span>fiscal</span></button>
     </nav>
   );
 }
@@ -6592,7 +6649,14 @@ export default function App() {
     );
   }
 
-
+  if (screen === "fiscal" && workshop) {
+    content = (
+      <FiscalScreen
+        go={navigate}
+        workshop={workshop}
+      />
+    );
+  }
 
   return (
     <>
